@@ -32,7 +32,7 @@
   "homepage": "https://github.com/DePayFi/depay-web3mock#readme",
   "private": false,
   "dependencies": {
-    "ethers": "^5.4.0"
+    "ethers": "^5.5.2"
   },
   "peerDependencies": {},
   "engines": {
