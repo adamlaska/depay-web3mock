@@ -76,6 +76,6 @@
     "rollup-plugin-polyfill-node": "^0.8.0",
     "web3": "^1.6.1",
     "web3-eth-contract": "^1.6.1",
-    "webpack": "^5.73.0"
+    "webpack": "^5.76.0"
   }
 }
