@@ -1,8 +1,9 @@
+import Blockchains from "@depay/web3-blockchains"
 import { ethers } from 'ethers'
 import { mock, resetMocks, confirm, anything, replace } from 'src'
 import { supported } from "src/blockchains"
 
-describe('evm mock transactions', ()=> {
+describe('mock transactions', ()=> {
 
   supported.evm.forEach((blockchain)=>{
 
@@ -55,6 +56,66 @@ describe('evm mock transactions', ()=> {
         expect(mockedTransaction).toHaveBeenCalled()
       })
 
+      it('mocks a transaction receipt', async ()=> {
+
+        let logs = [{
+          blockNumber: 16797899,
+          blockHash: '0x5948d965ab5805ace0bc7556672c8f475515ac853c4477f17cc49287f402430e',
+          transactionIndex: 65,
+          address: '0x6A12C2Cc8AF31f125484EB685F7c0bfcE280B919',
+          data: '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          topics: [
+            '0x83f5257fc3f5f94fa653d44d66c91bba315ce36d9c3c00b14278da4d3b635647',
+            '0x0000000000000000000000008f0a62ff2ae1fa08b25070b8b5138fb45630456f',
+            '0x000000000000000000000000fcd9c98aae3229a5984a27dee7e6c3b77f1622b5',
+          ],
+          transactionHash: '0x1f6e88067388a82924535eaa2c4af83143652dba3ec518fbc1ee24d7522efa02',
+          logIndex: 226
+        }]
+        
+        let mockedTransaction = mock({
+          blockchain,
+          transaction: {
+            to: '0x5Af489c8786A018EC4814194dC8048be1007e390',
+            from: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+            value: "2000000000000000000",
+            logs
+          }
+        })
+
+        expect(mockedTransaction.transaction._id).toBeDefined()
+        confirm(mockedTransaction)
+
+        let provider = new ethers.providers.Web3Provider(global.ethereum);
+
+        let receipt = await provider.getTransactionReceipt(mockedTransaction.transaction._id);
+        expect(receipt.from).toEqual('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+        expect(receipt.to).toEqual('0x5Af489c8786A018EC4814194dC8048be1007e390')
+        expect(receipt.logs).toEqual(logs)
+      })
+
+      it('mocks a transaction', async ()=> {
+        
+        let mockedTransaction = mock({
+          blockchain,
+          transaction: {
+            to: '0x5Af489c8786A018EC4814194dC8048be1007e390',
+            from: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+            value: "2000000000000000000"
+          }
+        })
+
+        expect(mockedTransaction.transaction._id).toBeDefined()
+        confirm(mockedTransaction)
+
+        let provider = new ethers.providers.Web3Provider(global.ethereum);
+
+        let transaction = await provider.getTransaction(mockedTransaction.transaction._id);
+        expect(transaction.from).toEqual('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+        expect(transaction.to).toEqual('0x5Af489c8786A018EC4814194dC8048be1007e390')
+        expect(transaction.value.toString()).toEqual('2000000000000000000')
+      })
+
       it('mocks a complex contract transaction', async ()=> {
 
         let api = [{"inputs":[{"internalType":"address","name":"_configuration","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"ETH","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"configuration","outputs":[{"internalType":"contract DePayRouterV1Configuration","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"pluginAddress","type":"address"}],"name":"isApproved","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"address[]","name":"addresses","type":"address[]"},{"internalType":"address[]","name":"plugins","type":"address[]"},{"internalType":"string[]","name":"data","type":"string[]"}],"name":"route","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
@@ -94,6 +155,72 @@ describe('evm mock transactions', ()=> {
 
         expect(transaction).toBeDefined()
 
+        expect(mockedTransaction).toHaveBeenCalled()
+      })
+
+      it('mocks a complex contract transaction with tuple arugments', async ()=> {
+
+        let api = [{"inputs":[{"internalType":"address","name":"_PERMIT2","type":"address"},{"internalType":"address","name":"_FORWARDER","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"exchange","type":"address"}],"name":"Disabled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"exchange","type":"address"}],"name":"Enabled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"FORWARDER","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERMIT2","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"exchange","type":"address"},{"internalType":"bool","name":"enabled","type":"bool"}],"name":"enable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"exchanges","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"components":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"bool","name":"permit2","type":"bool"},{"internalType":"uint256","name":"paymentAmount","type":"uint256"},{"internalType":"uint256","name":"feeAmount","type":"uint256"},{"internalType":"address","name":"tokenInAddress","type":"address"},{"internalType":"address","name":"exchangeAddress","type":"address"},{"internalType":"address","name":"tokenOutAddress","type":"address"},{"internalType":"address","name":"paymentReceiverAddress","type":"address"},{"internalType":"address","name":"feeReceiverAddress","type":"address"},{"internalType":"uint8","name":"exchangeType","type":"uint8"},{"internalType":"uint8","name":"receiverType","type":"uint8"},{"internalType":"bytes","name":"exchangeCallData","type":"bytes"},{"internalType":"bytes","name":"receiverCallData","type":"bytes"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"internalType":"struct IDePayRouterV2.Payment","name":"payment","type":"tuple"}],"name":"pay","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"payable","type":"function"},{"inputs":[{"components":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"bool","name":"permit2","type":"bool"},{"internalType":"uint256","name":"paymentAmount","type":"uint256"},{"internalType":"uint256","name":"feeAmount","type":"uint256"},{"internalType":"address","name":"tokenInAddress","type":"address"},{"internalType":"address","name":"exchangeAddress","type":"address"},{"internalType":"address","name":"tokenOutAddress","type":"address"},{"internalType":"address","name":"paymentReceiverAddress","type":"address"},{"internalType":"address","name":"feeReceiverAddress","type":"address"},{"internalType":"uint8","name":"exchangeType","type":"uint8"},{"internalType":"uint8","name":"receiverType","type":"uint8"},{"internalType":"bytes","name":"exchangeCallData","type":"bytes"},{"internalType":"bytes","name":"receiverCallData","type":"bytes"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"internalType":"struct IDePayRouterV2.Payment","name":"payment","type":"tuple"},{"components":[{"components":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint160","name":"amount","type":"uint160"},{"internalType":"uint48","name":"expiration","type":"uint48"},{"internalType":"uint48","name":"nonce","type":"uint48"}],"internalType":"struct IPermit2.PermitDetails","name":"details","type":"tuple"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"sigDeadline","type":"uint256"}],"internalType":"struct IPermit2.PermitSingle","name":"permitSingle","type":"tuple"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"pay","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}]
+        
+        let mockedTransaction = mock({
+          blockchain,
+          transaction: {
+            from: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+            to: '0xae60aC8e69414C2Dc362D0e6a03af643d1D85b92',
+            api,
+            method: 'pay',
+            params: {
+              payment: {
+                amountIn: ethers.BigNumber.from('1000000'),
+                permit2: false,
+                paymentAmount: ethers.BigNumber.from('1000000'),
+                feeAmount: 0,
+                tokenInAddress: Blockchains[blockchain].zero,
+                exchangeAddress: Blockchains[blockchain].zero,
+                tokenOutAddress: Blockchains[blockchain].currency.address,
+                paymentReceiverAddress: Blockchains[blockchain].zero,
+                feeReceiverAddress: Blockchains[blockchain].zero,
+                exchangeType: 1,
+                receiverType: 0,
+                exchangeCallData: anything,
+                receiverCallData: Blockchains[blockchain].zero,
+                deadline: anything,
+              }
+            }
+          }
+        })
+
+        let provider = new ethers.providers.Web3Provider(global.ethereum);
+
+        let contract = new ethers.Contract(
+          "0xae60aC8e69414C2Dc362D0e6a03af643d1D85b92",
+          api,
+          provider
+        );
+
+        let signer = provider.getSigner();
+
+        let transaction = await contract.connect(signer)['pay((uint256,bool,uint256,uint256,address,address,address,address,address,uint8,uint8,bytes,bytes,uint256))'](
+          {
+            amountIn: ethers.BigNumber.from('1000000'),
+            permit2: false,
+            paymentAmount: ethers.BigNumber.from('1000000'),
+            feeAmount: 0,
+            tokenInAddress: Blockchains[blockchain].zero,
+            exchangeAddress: Blockchains[blockchain].zero,
+            tokenOutAddress: Blockchains[blockchain].currency.address,
+            paymentReceiverAddress: Blockchains[blockchain].zero,
+            feeReceiverAddress: Blockchains[blockchain].zero,
+            exchangeType: 1,
+            receiverType: 0,
+            exchangeCallData: Blockchains[blockchain].zero,
+            receiverCallData: Blockchains[blockchain].zero,
+            deadline: 0,
+          },
+          { value: 0 }
+        )
+
+        expect(transaction).toBeDefined()
         expect(mockedTransaction).toHaveBeenCalled()
       })
 

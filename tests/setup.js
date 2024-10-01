@@ -1,5 +1,6 @@
 import 'regenerator-runtime/runtime'
-import { Crypto } from "@peculiar/webcrypto"
-global.crypto = new Crypto()
-import fetch from 'cross-fetch'
-global.fetch = fetch
+import { TextEncoder, TextDecoder } from 'util'
+
+global.fetch = require('node-fetch')
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder

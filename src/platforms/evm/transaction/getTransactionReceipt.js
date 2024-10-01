@@ -8,6 +8,8 @@ export default (hash) => {
 
   if (mock) {
     return Promise.resolve({
+        from: mock?.transaction?.from,
+        to: mock?.transaction?.to,
         transactionHash: hash,
         transactionIndex: '0x1',
         blockNumber: ethers.BigNumber.from(mock.transaction._confirmedAtBlock || getCurrentBlock())
@@ -15,7 +17,7 @@ export default (hash) => {
         blockHash: getRandomTransactionHash(mock.blockchain),
         cumulativeGasUsed: '0x33bc',
         gasUsed: '0x4dc',
-        logs: [],
+        logs: mock?.transaction?.logs || [],
         logsBloom: '0x0000000000000000000000000000000000000000',
         status: mock.transaction?._failed ? '0x0' : '0x1',
       })

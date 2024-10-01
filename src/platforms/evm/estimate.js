@@ -19,9 +19,7 @@ let estimate = ({ blockchain, params, provider }) => {
   let defaultEstimate = Promise.resolve('0x2c4a0')
   let mock
 
-  if (params === undefined) {
-    return defaultEstimate
-  }
+  if(params?.transaction) { params = params.transaction }
 
   mock = findMock({ type: 'estimate', params, provider })
   if (mock) {

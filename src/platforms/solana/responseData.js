@@ -1,20 +1,22 @@
+import Blockchains from '@depay/web3-blockchains'
 import raise from '../../raise'
-import { CONSTANTS } from '@depay/web3-constants'
 import { findMock, findAnyMockForThisAddress } from './findMock'
 import { PublicKey, Buffer, BN } from '@depay/solana-web3.js'
+
+const NATIVE = Blockchains.findByName('solana').currency.address
 
 let marshalValue = (value, blockchain)=>{
   if(typeof value == 'number') {
     return value
-  } else if (typeof value == 'string' && value == CONSTANTS[blockchain].NATIVE) {
+  } else if (typeof value == 'string' && value == NATIVE) {
     return new PublicKey(value)
-  } else if (typeof value == 'string' && value.match(/\D/)) {
+  } else if (typeof value == 'string' && value.match(/[^0-9-]/)) {
     try {
       return new PublicKey(value)
     } catch(e) { // normal string
       return Buffer.from(value, 'utf-8')
     }
-  } else if (typeof value == 'string' && !value.match(/\D/)) {
+  } else if (typeof value == 'string' && !value.match(/[^0-9-]/)) {
     return new BN(value, 10)
   } else if (typeof value == 'boolean') {
     return value
@@ -45,6 +47,10 @@ let callMock = ({ blockchain, mock, params, provider, raw })=> {
     return Promise.resolve(mock.request.return)
   } else if(!mock.request.return) {
     return Promise.resolve(mock.request.return)
+  } else if(mock.request.return && mock.request.return.raw ) {
+
+    return Promise.resolve(mock.request.return.raw)
+
   } else {
     let response = marshalValue(mock.request.return, blockchain)
 
@@ -62,7 +68,7 @@ let callMock = ({ blockchain, mock, params, provider, raw })=> {
 }
 
 let responseData = function ({ blockchain, provider, method, params, raw }) {
-  let mock = findMock({ blockchain, type: 'request', params, provider })
+  let mock = findMock({ blockchain, type: 'request', params, method, provider })
 
   if(mock) {
     if(mock.request.delay) {

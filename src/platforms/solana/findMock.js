@@ -11,6 +11,11 @@ let mockHasWrongType = (mock, type) => {
   return mock[type] == undefined
 }
 
+let mockHasWrongMethod = (mock, method) => {
+  if(mock.request && mock.request.method) { return mock.request.method != method }
+  return false
+}
+
 let mockHasWrongBlockchain = (mock, blockchain) => {
   if(blockchain == undefined) { return false }
   return mock.blockchain != blockchain
@@ -21,26 +26,46 @@ let mockHasWrongProvider = (mock, provider) => {
   return mock.provider != provider
 }
 
-let mockHasWrongTransactionData = (mock, type, params) => {
+let mockHasWrongTransactionData = (mock, type, transaction) => {
+  let requiredFrom = transaction?.message?.staticAccountKeys?.length ? transaction.message.staticAccountKeys[0].toString() : undefined
+
   return (
-    (mock[type].from && normalize(params?.feePayer?.toString()) !== normalize(mock[type].from))
+    (mock[type].from && normalize(requiredFrom) !== normalize(mock[type].from))
   )
 }
 
-let mockHasWrongTransactionInstructions = (mock, type, params) => {
+let mockInstructionsMatch = (mockedInstruction, instruction)=>{
+  if(mockedInstruction?.params == anything) { return true }
+  if(!mockedInstruction.params) { return true }
+  let decodedInstructionData
+  try { decodedInstructionData = mockedInstruction.api.decode(instruction.data) } catch {}
+  if(!decodedInstructionData) { return false }
+  
+  return Object.keys(mockedInstruction.params).every((key)=>{
+    if(mockedInstruction.params[key] == anything) { return true }
+    return normalize(mockedInstruction.params[key]) == normalize(decodedInstructionData[key])
+  })
+}
+
+let mockKeysMatch = (mockedInstruction, instruction, transaction)=>{
+  if(mockedInstruction?.keys == anything) { return true }
+  if(!mockedInstruction.keys || mockedInstruction.keys.length === 0) { return true }
+  return mockedInstruction.keys.every((mockedKey, index)=>{
+    if(mockedKey === anything) { return true }
+    return(
+      mockedKey.pubkey.toString() === transaction.message.staticAccountKeys[instruction.accountKeyIndexes[index]].toString()
+    )
+  }) 
+}
+
+let mockHasWrongTransactionInstructions = (mock, type, transaction) => {
   return (
     (mock[type]?.instructions && mock[type].instructions.some((mockedInstruction)=>{
-      if(mockedInstruction?.params == anything) { return false }
-      return ! params?.instructions.some((instruction)=>{
-        if(normalize(instruction?.programId?.toString()) != normalize(mockedInstruction.to)) { return false }
-        const decodedInstructionData = mockedInstruction.api.decode(params.data)
-        if(Object.keys(decodedInstructionData).some((key)=>{
-          if(!mockedInstruction.params) { return false }
-          if(mockedInstruction.params[key] == anything) { return false }
-          return mockedInstruction.params[key] != decodedInstructionData[key]
-        })) { return false }
-
-        return true
+      return !(transaction?.message?.compiledInstructions).some((instruction)=>{
+        let instructionProgramId = transaction.message.staticAccountKeys[instruction.programIdIndex].toString()
+        if(normalize(instructionProgramId) != normalize(mockedInstruction.to)) { return false }
+        if(!mockedInstruction.params && !mockedInstruction.keys) { return true }
+        return mockInstructionsMatch(mockedInstruction, instruction) && mockKeysMatch(mockedInstruction, instruction, transaction)
       })
     }))
   )
@@ -117,10 +142,15 @@ let mockHasWrongParams = (mock, type, params, provider) => {
   if(mock.request == undefined) { return false }
   if(mock.request.params == undefined) { return false }
 
-  if(params == undefined || params[1] == undefined) { return true }
+  if(params == undefined) { return true }
 
-  let requestParams = JSON.parse(JSON.stringify(params[1]))
-  delete requestParams.encoding
+  let requestParams
+  if(params && params[1]) {
+    requestParams = JSON.parse(JSON.stringify(params[1]))
+    delete requestParams.encoding  
+  } else {
+    requestParams = params
+  }
 
   if(JSON.stringify(requestParams) != JSON.stringify(mock.request.params)) {
     return true
@@ -132,7 +162,7 @@ let mockHasWrongNetworkAction = (mock, type, params) => {
   return Object.keys(mock.network)[0] != Object.keys(params)[0]
 }
 
-let findMock = ({ type, blockchain, params, block, provider }) => {
+let findMock = ({ type, blockchain, params, method, block, provider }) => {
   return mocks.find((mock) => {
     if (mockIsNotAnObject(mock)) {
       return
@@ -144,6 +174,9 @@ let findMock = ({ type, blockchain, params, block, provider }) => {
       return
     }
     if (mockHasWrongType(mock, type)) {
+      return
+    }
+    if (mockHasWrongMethod(mock, method)) {
       return
     }
     if (mockHasWrongTransactionData(mock, type, params)) {

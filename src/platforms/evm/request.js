@@ -1,9 +1,8 @@
+import Blockchains from '@depay/web3-blockchains'
 import getTransactionByHash from './transaction/getTransactionByHash'
 import getTransactionReceipt from './transaction/getTransactionReceipt'
-import { getTransactionCount } from './transaction/count'
 import raise from '../../raise'
 import { balance } from './balance'
-import { Blockchain } from '@depay/web3-blockchains'
 import { call } from './call'
 import { code } from './code'
 import { estimate } from './estimate'
@@ -11,11 +10,15 @@ import { ethers } from 'ethers'
 import { getAccounts } from './accounts'
 import { getCurrentBlock, getBlockData } from '../../block'
 import { getCurrentNetwork } from '../../network'
+import { getLogs } from './logs'
+import { getTransactionCount } from './transaction/count'
 import { sign } from './sign'
 import { switchNetwork, addNetwork } from './network'
+import { traceTransaction } from './trace'
 import { transaction } from './transaction'
 
 let request = ({ blockchain, request, provider }) => {
+  let params
 
   // Web3js request fix (nested request)
   if(Object.keys(request.method).includes('method')) {
@@ -30,7 +33,7 @@ let request = ({ blockchain, request, provider }) => {
 
   switch (request.method) {
     case 'eth_chainId':
-      return Promise.resolve(Blockchain.findByName(blockchain).id)
+      return Promise.resolve(Blockchains.findByName(blockchain).id)
       break
 
     case 'eth_getBalance':
@@ -38,7 +41,7 @@ let request = ({ blockchain, request, provider }) => {
       break
 
     case 'net_version':
-      return Promise.resolve(Blockchain.findByName(blockchain).networkId)
+      return Promise.resolve(Blockchains.findByName(blockchain).networkId)
       break
 
     case 'eth_requestAccounts':
@@ -47,8 +50,8 @@ let request = ({ blockchain, request, provider }) => {
       break
 
     case 'eth_estimateGas':
-      let params = request.params ? request.params[0] : undefined
-      return estimate({ blockchain, params: params, provider })
+      params = request.params ? ((request.params instanceof Array) ? request.params[0] : request.params) : undefined
+      return estimate({ blockchain, params, provider })
       break
 
     case 'eth_blockNumber':
@@ -88,11 +91,12 @@ let request = ({ blockchain, request, provider }) => {
       break
 
     case 'eth_getTransactionReceipt':
-      return getTransactionReceipt(request.params[0])
+      return getTransactionReceipt((request.params instanceof Array) ? request.params[0] : request.params.transactionHash)
       break
 
     case 'eth_getTransactionCount':
-      return Promise.resolve(getTransactionCount(request.params[0]))
+      params = request.params ? ((request.params instanceof Array) ? request.params[0] : request.params.address) : undefined
+      return Promise.resolve(getTransactionCount(params))
       break
 
     case 'eth_subscribe':
@@ -120,6 +124,16 @@ let request = ({ blockchain, request, provider }) => {
     case 'eth_getCode':
       return code({ blockchain, params: request.params, provider })
       break
+
+    case 'eth_getGasPrice':
+      return Promise.resolve(ethers.utils.hexlify(13370000000))
+
+    case 'eth_getLogs':
+      params = request.params ? ((request.params instanceof Array) ? request.params[0] : request.params) : undefined
+      return getLogs({ blockchain, params, provider })
+    
+    case 'debug_traceTransaction':
+      return traceTransaction({ blockchain, params: request.params, provider })
 
     default:
       raise('Web3Mock request: Unknown request method ' + request.method + '!')

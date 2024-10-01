@@ -8,6 +8,8 @@ let signAndSendTransaction = ({ blockchain, params, provider }) => {
   if(mock) {
     mock.calls.add(params)
 
+    const publicKey = params.message.staticAccountKeys[0].toString()
+
     if(mock.transaction.delay) {
       return new Promise((resolve, reject)=>{
         setTimeout(()=>{
@@ -15,7 +17,7 @@ let signAndSendTransaction = ({ blockchain, params, provider }) => {
             reject(mock.transaction.return)
           } else {
             resolve({
-              publicKey: params.feePayer.toString(),
+              publicKey,
               signature: mock.transaction._id
             })
           }
@@ -26,7 +28,7 @@ let signAndSendTransaction = ({ blockchain, params, provider }) => {
         return Promise.reject(mock.transaction.return)
       } else {
         return Promise.resolve({
-          publicKey: params.feePayer.toString(),
+          publicKey,
           signature: mock.transaction._id
         })
       }
@@ -42,15 +44,20 @@ let signAndSendTransaction = ({ blockchain, params, provider }) => {
   }
 }
 
-let getTransactionToBeMocked = (params) =>{
+let getTransactionToBeMocked = (transaction) =>{
+
+  let from = transaction?.message?.staticAccountKeys?.length ? transaction.message.staticAccountKeys[0].toString() : 'FROM'
 
   return {
-    from: params?.feePayer?.toString(),
-    instructions: params.instructions.map((instruction)=>{
+    from,
+    instructions: (transaction?.message?.compiledInstructions || []).map((instruction)=>{
+
+      let to = transaction?.message?.staticAccountKeys?.length ? transaction.message.staticAccountKeys[instruction.programIdIndex].toString() : 'TO'
+
       return {
-        to: instruction?.programId?.toString(),
+        to,
         api: ["API HERE"],
-        data: { value: "HERE" }
+        params: { value: "HERE" }
       }
     })
   }
@@ -87,17 +94,19 @@ let getConfirmedTransaction = ({ signature }) => {
     return({
       blockTime: 1658913018,
       slot: 143351809,
-      transaction: {},
+      transaction: {
+        signatures: [mock.transaction._id],
+        message: {
+          compiledInstructions: mock.transaction.compiledInstructions ? mock.transaction.compiledInstructions : []
+        }
+      },
       meta: {
         err: mock.transaction._failed ? { InstructionError: [0, 'Error'] } : null,
-        logMessages: mock.transaction._failedReason ? [mock.transaction._failedReason] : []
+        logMessages: mock.transaction._failedReason ? [mock.transaction._failedReason] : (mock.transaction.logMessages || [])
       }
     })
   } else {
-    return({
-      context: {apiVersion: '1.10.31', slot: 143064206},
-      value: null
-    })
+    return(null)
   }
 }
 

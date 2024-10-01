@@ -2,7 +2,9 @@ let currentBlock
 
 let blockData = {}
 
-let getCurrentBlock = () => currentBlock
+let getCurrentBlock = () => {
+  return currentBlock
+}
 
 let resetCurrentBlock = ()=>{
   currentBlock = 1
@@ -15,7 +17,7 @@ let increaseBlock = (amount = 1) => {
 }
 
 let getBlockData = (number) => {
-  return(blockData[number] || {})
+  return(blockData[number] || null)
 }
 
 let setBlockData = (number, data) => {

@@ -7,9 +7,7 @@ const { devices } = require('@playwright/test');
  */
 // require('dotenv').config();
 
-// web3-mock polyfills:
-global.XMLHttpRequest = require('xhr2')
-global.location = { host: undefined }
+global.fetch = require('node-fetch')
 
 /**
  * @see https://playwright.dev/docs/test-configuration

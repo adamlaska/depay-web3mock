@@ -12,6 +12,8 @@ or
 npm install --save-dev @depay/web3-mock
 ```
 
+Make sure you setup [Jest](https://github.com/DePayFi/web3-mock#jest), [Cypress](https://github.com/DePayFi/web3-mock#cypress) or [Playwright](https://github.com/DePayFi/web3-mock#playwright) correctly before start using web3-mock.
+
 ### Basics
 
 #### EVM: Basics
@@ -34,8 +36,9 @@ describe('something', ()=> {
 
 #### Solana: Basics
 
+Requires explicit provider mocking (see [Providers](#Providers))
+
 ```javascript
-// requires explicit provider mocking (see #Providers)
 
 let connection = new Connection('https://api.mainnet-beta.solana.com')
 mock({ blockchain: 'solana', provider: connection })
@@ -174,7 +177,11 @@ describe('something', ()=> {
           api: struct([
             u32('instruction'),
             u64('lamports')
-          ])
+          ]),
+          params: {
+            instruction: 2,
+            lamports: 1000000000,
+          }
         }]
       }
     })
@@ -210,6 +217,37 @@ describe('something', ()=> {
   })
 ```
 
+## Providers
+
+### viem / wagmi
+
+viem makes it's own internal public client inaccesible for external mocks due to their decorator pattern (see: https://github.com/wagmi-dev/viem/blob/main/src/clients/createPublicClient.ts#LL86C8-L86C21).
+
+That's why only the `custom(window.ethereum)` is compatible with `web3-mock`:
+
+```javascript
+import { WagmiConfig, createConfig, mainnet } from 'wagmi'
+import { createPublicClient, custom } from 'viem'
+
+const config = createConfig({
+  autoConnect: true,
+  publicClient: createPublicClient({
+    chain: mainnet,
+    transport: custom(window.ethereum),
+  }),
+})
+
+//...
+
+mock({
+  blockchain: 'ethereum',
+  balance: {
+    for: '0xb0252f13850a4823706607524de0b146820F2240',
+    return: '232111122321'
+  }
+})
+```
+
 ## Support
 
 This library supports the following blockchains:
@@ -218,6 +256,13 @@ This library supports the following blockchains:
 - [BNB Smart Chain](https://www.binance.org/smartChain)
 - [Polygon](https://polygon.technology)
 - [Solana](https://solana.com)
+- [Fantom](https://fantom.foundation)
+- [Arbitrum](https://arbitrum.io)
+- [Avalanche](https://www.avax.network)
+- [Gnosis](https://gnosis.io)
+- [Optimism](https://www.optimism.io)
+- [Base](https://base.org)
+- [Worldchain](https://worldcoin.org/world-chain)
 
 This library supports the all crypto wallets that inject window.ethereum or window.solana like:
 
@@ -225,21 +270,23 @@ This library supports the all crypto wallets that inject window.ethereum or wind
 - [Coinbase Wallet](https://wallet.coinbase.com)
 - [Phantom](https://phantom.app/)
 
-100+ different wallets via [WalletConnect](https://walletconnect.org), such as:
-- [Trust Wallet](https://trustwallet.com)
-- [DeFi Wallet by crypto.com](https://crypto.com/defi-wallet)
-- [1inch Wallet](https://1inch.io/wallet/)
-- [imToken Wallet](https://www.token.im)
-- [TokenPocket](https://www.tokenpocket.pro/en)
-- [Pillar](https://www.pillar.fi/)
-- [Math Wallet](https://mathwallet.org/)
-- [Ledger Live](https://www.ledger.com/ledger-live)
-- [Argent Wallet](https://www.argent.xyz)
-- [AlphaWallet](https://alphawallet.com/)
-- [Unstoppable Wallet](https://unstoppable.money)
-- [Atomic Wallet](https://atomicwallet.io)
-- [Rainbow](https://rainbow.me/)
-- and more...
+100+ different wallets via [WalletConnect](https://walletconnect.org).
+
+## Platform specific packaging
+
+In case you want to use and package only specific platforms, use platform specific packages:
+
+### EVM platform specific package
+
+```javascript
+import { mock } from '@depay/web3-mock-evm'
+```
+
+### Solana platform specific package
+
+```javascript
+import { mock } from '@depay/web3-mock-solana'
+```
 
 ## Functionalities
 
@@ -530,6 +577,32 @@ expect(accounts.map((account)=>account.pubkey.toString())).toEqual([
 ])
 ```
 
+##### Solana: Return raw mocked data
+
+```javascript
+const connection = new Connection('https://api.mainnet-beta.solana.com')
+
+const altLookupMock = mock({
+  provider: connection,
+  blockchain,
+  request: {
+    method: 'getAccountInfo',
+    to: 'EYGgx5fYCZtLN2pvnR4Bhn5KpMffKwyHCms4VhjSvF2K',
+    return: {
+      raw: [
+        'AQAAAP//////////lLGICwAAAAAAAZUI+NweiVYgbeIRBEMNzoLMusq6HgZtEwERcVYj1p/XAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpjJclj04kifG7PRApFI4NgwtaE5na/xCEBI572Nvp+FkGm4hX/quBhPtof2NGGMA12sQ53BrrO1WYoPAAAAAAAQ4DaF+OkJBT5FgSHGb1p2rtx3BqoRyC+KqVKo8reHmpDpoKvwBmYYKpkmwX9Ra2xxeUYGLrb2ybLB8DYx6TbqtYvtHSRjfDO652liD+rV4xFH1onTGdwBEBKgOpjZ0hheYdmw0g/Sz5t99kRCL9onQzwZnnJHNJKmDY+gEjqA7C'
+        , 'base64'
+      ]
+    }
+  }
+})
+
+let addressLookupTable = await connection.getAddressLookupTable(new PublicKey('EYGgx5fYCZtLN2pvnR4Bhn5KpMffKwyHCms4VhjSvF2K')).then((res) => res.value)
+
+expect(addressLookupTable.key.toString()).toEqual('EYGgx5fYCZtLN2pvnR4Bhn5KpMffKwyHCms4VhjSvF2K')
+expect(addressLookupTable.state.addresses.length).toEqual(8)
+```
+
 #### The "anything" Parameter
 
 ```javascript
@@ -795,10 +868,6 @@ let requestMock = mock({
       to: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
       api: POOL_INFO
     }],
-    params: {
-      instruction: 12,
-      simulateType: 0
-    },
     return: {
       logs
     }
@@ -1093,6 +1162,109 @@ let transaction = await contract.connect(signer).route(
   [],
   { value: 0 }
 )
+```
+
+### Logs
+
+Mock log requests:
+
+```javascript
+ const log = {
+  blockNumber: 16797899,
+  blockHash: '0x5948d965ab5805ace0bc7556672c8f475515ac853c4477f17cc49287f402430e',
+  transactionIndex: 65,
+  removed: false,
+  address: '0x6A12C2Cc8AF31f125484EB685F7c0bfcE280B919',
+  data: '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+  topics: [
+    '0x83f5257fc3f5f94fa653d44d66c91bba315ce36d9c3c00b14278da4d3b635647',
+    '0x0000000000000000000000008f0a62ff2ae1fa08b25070b8b5138fb45630456f',
+    '0x000000000000000000000000fcd9c98aae3229a5984a27dee7e6c3b77f1622b5',
+  ],
+  transactionHash: '0x1f6e88067388a82924535eaa2c4af83143652dba3ec518fbc1ee24d7522efa02',
+  logIndex: 226
+}
+
+mock({
+  blockchain,
+  logs: {
+    address: '0x6A12C2Cc8AF31f125484EB685F7c0bfcE280B919',
+    topics: [
+      '0x83f5257fc3f5f94fa653d44d66c91bba315ce36d9c3c00b14278da4d3b635647',
+      '0x0000000000000000000000008f0a62ff2ae1fa08b25070b8b5138fb45630456f',
+      '0x000000000000000000000000fcd9c98aae3229a5984a27dee7e6c3b77f1622b5',
+    ],
+    fromBlock: '0x1',
+    toBlock: '0x5',
+    return: [log]
+  }
+})
+
+let provider = new ethers.providers.Web3Provider(global.ethereum)
+
+const topics = [
+  ethers.utils.id('Payment(address,address,uint256,address)'),
+  ethers.utils.hexZeroPad('0x8f0a62Ff2Ae1FA08B25070B8b5138fb45630456F', 32),
+  ethers.utils.hexZeroPad('0xFcd9C98AAe3229A5984a27dEE7E6C3b77F1622b5', 32)
+]
+
+let logs = await provider.getLogs({
+  address: '0x6a12c2cc8af31f125484eb685f7c0bfce280b919',
+  topics,
+  fromBlock: 1,
+  toBlock: 5
+})
+
+expect(logs[0]).toEqual(log)
+```
+
+### Trace
+
+Mock trace/debug requests:
+
+```javascript
+let mockedTransaction = mock({
+  blockchain,
+  transaction: {
+    to: '0x5Af489c8786A018EC4814194dC8048be1007e390',
+    from: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    value: "2000000000000000000"
+  }
+})
+
+let mockedTrace = {
+  from: '0xc215375ec78a0717ce90a96d45046aa9ebac2295',
+  gas: '0x3ce59',
+  gasUsed: '0x38edd',
+  to: '0xae60ac8e69414c2dc362d0e6a03af643d1d85b92',
+  input: '0xb7d29a3500000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000002c000000000000000000000000000000000000000000000000000000000000000020000000000000000000000007d1afa7b718fb893db30a3abc0cfc608aacfebb0000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000061ae3825302f10000000000000000000000000000000000000000000000000000013d65cd49e938000000000000000000000000000000000000000000000000000000000063e83f9e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004d55e173788000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000c215375ec78a0717ce90a96d45046aa9ebac229500000000000000000000000071658dd40208b449f66fe7bc4fc947d79dae0e8200000000000000000000000048765a87b4aa74e312a68f5e09f4099fbf0611060000000000000000000000000000000000000000000000000000000000000003000000000000000000000000e04b08dfc6caa0f4ec523a3ae283ece7efe00019000000000000000000000000d8fbc10787b019fe4059eb5aa5fb11a5862229ef000000000000000000000000981cad45c768d56136fdbb2c5e115f33d971be6c0000000000000000000000000000000000000000000000000000000000000000',
+  output: '0x0000000000000000000000000000000000000000000000000000000000000001',
+  calls: [
+    {
+      from: '0xae60ac8e69414c2dc362d0e6a03af643d1d85b92',
+      gas: '0x3a986',
+      gasUsed: '0x9c7d',
+      to: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0',
+      input: '0x23b872dd000000000000000000000000c215375ec78a0717ce90a96d45046aa9ebac2295000000000000000000000000ae60ac8e69414c2dc362d0e6a03af643d1d85b920000000000000000000000000000000000000000000000061ae3825302f10000',
+      output: '0x0000000000000000000000000000000000000000000000000000000000000001',
+      value: '0x0',
+      type: 'CALL'
+    },
+  ],
+  value: '0x0',
+  type: 'CALL'
+}
+
+mock({ blockchain, trace: {
+  params: [mockedTransaction.transaction._id, {"tracer": "callTracer"}],
+  return: mockedTrace
+}})
+        
+let provider = new ethers.providers.Web3Provider(global.ethereum)
+
+const returnedTrace = await provider.send('debug_traceTransaction', [mockedTransaction.transaction._id, {"tracer": "callTracer"}])
+
+expect(returnedTrace).toEqual(mockedTrace)
 ```
 
 ### Estimates
@@ -1488,6 +1660,19 @@ mock({
 // and allows to trigger walletlink events with "trigger"
 ```
 
+### Providers (mocking multiple providers)
+
+If you are working with multiple providers, you can pass `providers` instead of `provider` and have Web3Mock iterate of the list of providers internaly:
+
+```javascript
+const providers = await getProviders('ethereum')
+
+mock({
+  providers,
+  //...
+})
+```
+
 ### Test Helpers
 
 #### normalize
@@ -1560,10 +1745,3 @@ expect(transactionMock).to.have.been.callCount(n)
 
 #### Playwright
 
-Playwright requires the following setup in your playwright config file:
-
-```javascript
-// web3-mock polyfills:
-global.XMLHttpRequest = require('xhr2')
-global.location = { host: undefined }
-```

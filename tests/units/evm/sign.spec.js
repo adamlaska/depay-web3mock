@@ -1,5 +1,5 @@
-import {ethers} from 'ethers'
-import {mock, resetMocks} from 'src'
+import { ethers } from 'ethers'
+import { mock, resetMocks } from 'src'
 import { supported } from "src/blockchains"
 
 describe('evm mock signatures', ()=> {
