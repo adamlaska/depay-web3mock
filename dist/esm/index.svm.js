@@ -1251,6 +1251,8 @@ let mockWallet = ({ blockchain, configuration, window }) => {
     case 'walletlink':
       mock$1({ configuration, window });
       break
+    case false:
+      break
     default:
       if(supported.evm.includes(blockchain)) {
         window.ethereum = window._ethereum;
